@@ -67,7 +67,7 @@ def process_song_data(spark, input_data, output_data):
     WHERE artist_id IS NOT NULL
     """).dropDuplicates()
   artists_table.createOrReplaceTempView("artists")
-  artists_table.write.partitionBy("year", "artist_id").parquet(output_data + '/artists.parquet', mode="overwrite")
+  artists_table.write.parquet(output_data + '/artists.parquet', mode="overwrite")
 
   # create songs table and write to parquet 
   songs_table = spark.sql("""
@@ -81,7 +81,7 @@ def process_song_data(spark, input_data, output_data):
     WHERE song_id IS NOT NULL
     """).dropDuplicates()
   songs_table.createOrReplaceTempView("songs")
-  songs_table.write.parquet(output_data + '/songs.parquet', mode="overwrite")
+  songs_table.write.partitionBy("year", "artist_id").parquet(output_data + '/songs.parquet', mode="overwrite")
 
 
 def get_log_data(spark, input_data):
