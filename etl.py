@@ -12,6 +12,10 @@ os.environ["AWS_SECRET_ACCESS_KEY"] = config["AWS"]["AWS_SECRET_ACCESS_KEY"]
 os.environ["AWS_DEFAULT_REGION"]    = config["AWS"]["AWS_DEFAULT_REGION"]
 
 def create_spark_session():
+  """
+  Create and return SparkSession
+  """
+
   spark = SparkSession\
     .builder\
     .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0")\
@@ -20,6 +24,10 @@ def create_spark_session():
   return spark
 
 def get_song_data(spark, input_data):
+  """
+  Read song files and create spark dataframe
+  """
+
   # define song schema
   song_schema = StructType([
       StructField("artist_id", StringType()),
@@ -38,6 +46,11 @@ def get_song_data(spark, input_data):
   return spark.read.json(input_data, schema=song_schema)
 
 def process_song_data(spark, input_data, output_data):  
+  """
+  Process the song files and create tables
+  artists, and songs
+  """
+
   # read song data file
   df_song = get_song_data(spark, input_data)
   df_song.createOrReplaceTempView("songs_dataset")
@@ -54,7 +67,7 @@ def process_song_data(spark, input_data, output_data):
     WHERE artist_id IS NOT NULL
     """).dropDuplicates()
   artists_table.createOrReplaceTempView("artists")
-  artists_table.write.parquet(output_data + '/artists.parquet', mode="overwrite")
+  artists_table.write.partitionBy("year", "artist_id").parquet(output_data + '/artists.parquet', mode="overwrite")
 
   # create songs table and write to parquet 
   songs_table = spark.sql("""
@@ -72,6 +85,9 @@ def process_song_data(spark, input_data, output_data):
 
 
 def get_log_data(spark, input_data):
+  """
+  Read log files and create spark dataframe
+  """
 
   # define log schema
   log_schema = StructType([
@@ -100,6 +116,11 @@ def get_log_data(spark, input_data):
 
 
 def process_log_data(spark, input_data, output_data):
+  """
+  Process the log files and create tables
+  users, times, and songplays
+  """
+
   # read log data file
   df_log = get_log_data(spark, input_data)
   df_log.createOrReplaceTempView("logs_dataset")
@@ -134,7 +155,7 @@ def process_log_data(spark, input_data, output_data):
     AND ts IS NOT NULL
   """).dropDuplicates()
   time_table.createOrReplaceTempView("times")
-  time_table.write.parquet(output_data + '/times.parquet', mode="overwrite")
+  time_table.write.partitionBy("year", "month").parquet(output_data + '/times.parquet', mode="overwrite")
 
   # extract columns from joined song and log datasets to create songplays table 
   songplays_table = spark.sql("""
@@ -159,10 +180,13 @@ def process_log_data(spark, input_data, output_data):
     AND l.userId IS NOT NULL
     AND s.song_id IS NOT NULL
   """).dropDuplicates()
-  songplays_table.write.parquet(output_data + '/songplays.parquet', mode="overwrite")
+  songplays_table.write.partitionBy("year", "month").parquet(output_data + '/songplays.parquet', mode="overwrite")
 
 
 def main():
+  """
+  The main function that start execution
+  """
   spark = create_spark_session()
   
   # input_data = "s3a://udacity-dend/"
